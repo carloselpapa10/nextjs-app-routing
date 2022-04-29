@@ -1,27 +1,21 @@
-import { useRouter } from "next/router";
 import { Fragment } from "react";
-import { getEventById } from "../../dummy-data";
+import { getEventById, getFeaturedEvents } from "../../helpers/api-utils";
 import EventSummary from "../../components/event-detail/event-summary";
 import EventLogistics from "../../components/event-detail/event-logistics";
 import EventContent from "../../components/event-detail/event-content";
-import ErrorAlert from "../../components/ui/error-alert";
 
-const EventDetailPage = () => {
-  const router = useRouter();
-  const { id: eventId } = router.query;
-  const event = getEventById(eventId);
+const EventDetailPage = (props) => {
+  const event = props.event;
 
   if (!event) {
     return (
       <div>
-        <ErrorAlert>
-          <p>The event with id {eventId} was not found</p>
-        </ErrorAlert>
+        <div className="center">
+          <p>Loading...</p>
+        </div>
       </div>
     );
   }
-
-  console.log(router.query);
   return (
     <Fragment>
       <EventSummary title={event.title} />
@@ -39,3 +33,25 @@ const EventDetailPage = () => {
 };
 
 export default EventDetailPage;
+
+export const getStaticProps = async (context) => {
+  const { params } = context;
+  const ev = await getEventById(params.id);
+
+  return {
+    props: {
+      event: ev,
+    },
+    revalidate: 30,
+  };
+};
+
+export const getStaticPaths = async (context) => {
+  const events = await getFeaturedEvents();
+  const paths = events.map((event) => ({ params: { id: event.id } }));
+
+  return {
+    paths: paths,
+    fallback: true, //it could be 'blocking' to make the browser waits for the answer
+  };
+};

@@ -4,28 +4,12 @@ import EventList from "../../components/events/event-list";
 import ResultsTitle from "../../components/events/results-title";
 import Button from "../../components/ui/button";
 import ErrorAlert from "../../components/ui/error-alert";
-import { getFilteredEvents } from "../../dummy-data";
+import { getFilteredEvents } from "../../helpers/api-utils";
 
-const FilteredEventsPage = () => {
+const FilteredEventsPage = (props) => {
   const route = useRouter();
 
-  const slug = route.query.slug;
-
-  if (!slug || slug.length !== 2) {
-    return <p className="center">Loading...</p>;
-  }
-
-  const numYear = +slug[0];
-  const numMonth = +slug[1];
-
-  if (
-    isNaN(numYear) ||
-    isNaN(numMonth) ||
-    numMonth < 1 ||
-    numMonth > 12 ||
-    numYear > 2030 ||
-    numYear < 2021
-  ) {
+  if (props.hasError) {
     return (
       <Fragment>
         <ErrorAlert>
@@ -38,7 +22,7 @@ const FilteredEventsPage = () => {
     );
   }
 
-  const filteredEvents = getFilteredEvents({ year: +slug[0], month: +slug[1] });
+  const filteredEvents = props.events;
   if (!filteredEvents || filteredEvents.length === 0) {
     return (
       <Fragment>
@@ -53,7 +37,7 @@ const FilteredEventsPage = () => {
     );
   }
 
-  const date = new Date(numYear, numMonth - 1);
+  const date = new Date(props.year, props.month - 1);
   return (
     <Fragment>
       <ResultsTitle date={date} />
@@ -63,3 +47,39 @@ const FilteredEventsPage = () => {
 };
 
 export default FilteredEventsPage;
+
+export const getServerSideProps = async (context) => {
+  const { params } = context;
+
+  const slug = params.slug;
+  const numYear = +slug[0];
+  const numMonth = +slug[1];
+
+  if (
+    isNaN(numYear) ||
+    isNaN(numMonth) ||
+    numMonth < 1 ||
+    numMonth > 12 ||
+    numYear > 2030 ||
+    numYear < 2021
+  ) {
+    return {
+      props: {
+        hasError: true,
+      },
+    };
+  }
+
+  const filteredEvents = await getFilteredEvents({
+    year: numYear,
+    month: numMonth,
+  });
+
+  return {
+    props: {
+      events: filteredEvents,
+      year: numYear,
+      month: numMonth
+    },
+  };
+};
